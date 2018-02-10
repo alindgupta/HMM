@@ -1,0 +1,7 @@
+[
+{
+  "directory": "/Users/alindgupta/Desktop/test/build",
+  "command": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/c++   -I/usr/local/Cellar/eigen/3.3.4/include/eigen3    -std=c++14 -o CMakeFiles/out.dir/main.cpp.o -c /Users/alindgupta/Desktop/test/main.cpp",
+  "file": "/Users/alindgupta/Desktop/test/main.cpp"
+}
+]
