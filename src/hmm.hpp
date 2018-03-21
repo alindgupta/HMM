@@ -1,65 +1,38 @@
 #ifndef HMM_HPP
 #define HMM_HPP
 
+#include <Eigen/Dense>
 #include <vector>
 
+using Matrix = Eigen::MatrixXd;
+using MatrixType = Eigen::Ref<const Eigen::MatrixXd>;
+using Vector = Eigen::VectorXd;
+using VectorType = Eigen::Ref<const Eigen::VectorXd>;
 using state = int;
 
-namespace ops {
-  namespace hmm {
+template<std::size_t num_hidden, std::size_t num_obs>
+class HMM {
+public:
+  HMM() = default;
 
-    using EigenMatrix = Eigen::Ref<const Eigen::MatrixXd>;
+private:
+  Matrix<double, num_hidden, num_hidden> transition_probs;
+  Matrix<double, num_hidden, num_obs> emission_probs;
+  double init_prob = 1.0;
+}
 
-    /*
-    *
-    * 
-    * 
-    **/
-    class HMM {
-    public:
-      HMM(std::size_t num_hidden, std::size_t num_obs)
-        : m_num_hidden(n_hidden) {}
-
-      Eigen::VectorXd forward() noexcept {
-        if (!m_set) {
-          return nullptr;
-        }
-        Eigen::VectorXd<> p;
-        for (int t = 0; t < m_num_obs; t++) {
-          //
-        }
-        return p;
-      }
-
+template<std::size_t num_obs, std::size_t num_hidden>
+Vector forward(const MatrixType<num_hidden, num_hidden>& t_probs,
+               const MatrixType<num_hidden, num_obs> e_probs,
+               const VectorType& obs) {
+  std::size_t num_obs = static_cast<std::size_t>obs.size();
+  VectorType a = Vector::Zeros(num_obs);
+  a(0) = 1.0;
+  for (int t = 1; t < num_obs; ++t) {
+    for (int st = 0; st < num_hidden; ++st) {
       
-      double backward() noexcept {}
-      auto baum_welch() noexcept {}
-
-      std::vector<state>& infer(const std::vector<state>& states) noexcept {
-        Eigen::MatrixXd<> temp1;
-        Eigen::MatrixXd<> temp2;
-        for (int i = 0; i < states.size(); i++) {
-          temp1(i,0) = m_initial_probs(i) * m_transition_probs(i, state[0]);
-          temp2(i,0) = 0;
-        }
-        for (int i = 0; i < m_num_hidden; i++) {
-          for (int j = 0; j < m_num_obs; j++) {
-
-          }
-        }
-      }
-
-    private:
-      bool m_set = false;
-      std::size_t m_num_hidden;
-      std::size_t m_num_obs;
-      Eigen::VectorXd m_initial_probs;
-      Eigen::MatrixXd m_transition_probs;
-      Eigen::MatrixXd m_emission_probs;
-      Eigen::MatrixXd m_temporary;
-    };
-
-  } // namespace hmm
-} // namespace ops
+    }
+  }
+}
 
 #endif /* HMM_HPP */
