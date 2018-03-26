@@ -1,6 +1,7 @@
 #ifndef HMM_HPP
 #define HMM_HPP
 
+#include "initializers.hpp"
 #include <Eigen/Dense>
 #include <vector>
 
@@ -10,7 +11,7 @@ using MatrixType = Eigen::Ref<const Eigen::MatrixXd>;
 using VectorType = Eigen::Ref<const Eigen::VectorXd>;
 using state = int;
 
-using namespace initializers;
+using namespace hmm::initializers;
 
 namespace hmm {
 
@@ -32,44 +33,68 @@ namespace hmm {
      *
      */
     Vector forward(const VectorType& obs) {
+      
+      // Begin by initializing an empty array that
+      // will hold the forward probabilities
+      auto a = ZeroInitializer<num_hidden, num_obs>()();
 
-      std::size_t num_obs = static_cast<std::size_t>obs.size();
-      VectorType a = Vector::Zeros(num_obs);
-      a(0) = 1.0;
-
-      for (int t = 1; t < num_obs; ++t) {
-        auto e_obs = m_emission_probs(obs(t));
-        for (int h = 0; h < num_hidden; ++h) {
-          auto a_t0 = a(t-1);
-          auto t_t0 = m_transition_probs(/* something */);
-          auto out = a_t0 * t_t0;                               
-        }
-        a(t) = e_obs * out.sum();
+      Vector container(m_num_hidden);
+      
+      // We will calculate the forward probabilities
+      // of the first state
+      for (int h_i = 0; h_i < m_num_hidden; ++h_i) {
+        container = m_init_probs(h_i) * m_emission_probs(obs(0), h_i) * m_transition_probs.row(h_i);
+        a.col(0) = container.normalized();
       }
-    
-    private:
-      int m_num_hidden = num_hidden;
-      int m_num_obs = num_obs;
 
-      /**
-       * Transition probabilities 
-       * This is a symmetric matrix indexed by state
-       * such that the sum of transition probabilities
-       * from state i to state j is 1.
-       */
-      Matrix
-        m_transition_probs = NormalInitializer<num_hidden, num_hidden>(0.0, 1.0)();
+      // Now do the rest
+      for (int t = 1; t < num_obs; ++t) {
+        for (int h_i = 0; h_i < m_num_hidden; ++h_i) {
+          container = a.col(t-1) * m_emission_probs(obs(t), h_i) * m_transition_probs.row(h_i);
+          a.col(t) = container.normalized();
+        }
+      }
 
-      /**
-       * Emission probabilities 
-       * This is a matrix of probabilities of emitting
-       * an observable state o_i given the hidden state h_j
-       * such that the sum of emitting any o_i given h_j is 1.
-       */
-      Matrix
-        m_emission_probs =  NormalInitializer<num_hidden, num_obs>(0.0, 1.0)();
-
+      return a;
     }
-  } /* class HMM */
+
+    auto tprobs() const {
+      return m_transition_probs;
+    }
+
+    auto init_probs() const {
+      return m_init_probs;
+    }
+    
+  private:
+    int m_num_hidden = num_hidden;
+    int m_num_obs = num_obs;
+
+    /**
+     * Transition probabilities 
+     * This is a symmetric matrix indexed by state
+     * such that the sum of transition probabilities
+     * from state i to state j is 1.
+     * The rows signify "from" state and columns signify "to" state
+     * where the sum over rows is 1.
+     */
+    Matrix
+    m_transition_probs = NormalInitializer<num_hidden, num_hidden>(0.0, 1.0)();
+
+    /**
+     * Emission probabilities 
+     * This is a matrix of probabilities of emitting
+     * an observable state o_i given the hidden state h_j
+     * such that the sum of emitting any o_i given h_j is 1.
+     */
+    Matrix
+    m_emission_probs =  NormalInitializer<num_hidden, num_obs>(0.0, 1.0)();
+
+    Vector m_init_probs = UniformInitializer<num_hidden, 1>(0.09, 0.11)();
+
+    
+
+  };
+} /* class HMM */
 
 #endif /* HMM_HPP */
