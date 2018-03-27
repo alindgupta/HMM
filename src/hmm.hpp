@@ -49,7 +49,7 @@ namespace hmm {
         container = m_initial_probs(h_i)
           * m_emission_probs(h_i, obs(0))
           * m_transition_probs.row(h_i);
-        a.col(0) += container.transpose();
+        a.col(0) += container;
       }
 
       // Calculate forward probabilities for the rest of the observations
@@ -58,7 +58,7 @@ namespace hmm {
           container = a(h_i, t-1)
             * m_emission_probs(h_i, obs(t))
             * m_transition_probs.row(h_i);
-          a.col(t) += container.transpose();
+          a.col(t) += container;
         }
       }
 
