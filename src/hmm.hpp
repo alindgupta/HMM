@@ -65,7 +65,7 @@ namespace hmm {
       // Normalize forward probabilities by column
       Vector colsums = a.colwise().sum();
       for (int i = 0; i < a.cols(); ++i) {
-        a.col(i) = (a.col(i) / colsums(i)).transpose();
+        a.col(i) = (a.col(i) / colsums(i));
       }
   
       return a;
