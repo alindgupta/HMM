@@ -9,12 +9,11 @@ using Matrix = Eigen::MatrixXd;
 using Vector= Eigen::VectorXd;
 using MatrixType = Eigen::Ref<const Eigen::MatrixXd>;
 using VectorType = Eigen::Ref<const Eigen::VectorXd>;
-using state = int;
 
 using namespace hmm::initializers;
 
 namespace hmm {
-
+  
   /**
    * Instantiate an HMM object.
    * @tparam num_hidden Dimensionality of the hidden state
@@ -23,7 +22,13 @@ namespace hmm {
    */
   template<std::size_t num_hidden, std::size_t num_obs>
   class HMM {
+    
   public:
+    
+    /**
+     * Default constructor for HMM.
+     *
+     */
     HMM() = default;
 
     /**
@@ -32,39 +37,48 @@ namespace hmm {
      * @param obs A vector of observed states
      *
      */
-    Vector forward(const VectorType& obs) {
-      
-      // Begin by initializing an empty array that
-      // will hold the forward probabilities
-      auto a = ZeroInitializer<num_hidden, num_obs>()();
+    Matrix forward(const VectorType& obs) {
+      std::size_t len_obs = obs.size();
 
-      Vector container(m_num_hidden);
+      // Initialize a matrix to hold forward probabilities
+      Matrix a = Matrix::Zero(num_hidden, len_obs);
+      Vector container(num_hidden);
       
-      // We will calculate the forward probabilities
-      // of the first state
-      for (int h_i = 0; h_i < m_num_hidden; ++h_i) {
-        container = m_init_probs(h_i) * m_emission_probs(obs(0), h_i) * m_transition_probs.row(h_i);
-        a.col(0) = container.normalized();
+      // Calculate forward probabilities for the first observation
+      for (int h_i = 0; h_i < num_hidden; ++h_i) {
+        container = m_initial_probs(h_i)
+          * m_emission_probs(h_i, obs(0))
+          * m_transition_probs.row(h_i);
+        a.col(0) += container.transpose();
       }
 
-      // Now do the rest
-      for (int t = 1; t < num_obs; ++t) {
-        for (int h_i = 0; h_i < m_num_hidden; ++h_i) {
-          container = a.col(t-1) * m_emission_probs(obs(t), h_i) * m_transition_probs.row(h_i);
-          a.col(t) = container.normalized();
+      // Calculate forward probabilities for the rest of the observations
+      for (int t = 1; t < len_obs; ++t) {
+        for (int h_i = 0; h_i < num_hidden; ++h_i) {
+          container = a(h_i, t-1)
+            * m_emission_probs(h_i, obs(t))
+            * m_transition_probs.row(h_i);
+          a.col(t) += container.transpose();
         }
       }
 
+      // Normalize forward probabilities by column
+      Vector colsums = a.colwise().sum();
+      for (int i = 0; i < a.cols(); ++i) {
+        a.col(i) = (a.col(i) / colsums(i)).transpose();
+      }
+  
       return a;
     }
 
-    auto tprobs() const {
-      return m_transition_probs;
-    }
-
-    auto init_probs() const {
-      return m_init_probs;
-    }
+    // getters and setters
+    auto tprobs() const { return m_transition_probs; }
+    auto eprobs() const { return m_emission_probs; }
+    auto iprobs() const { return m_initial_probs; }
+    void set_tprobs(const Matrix& m) { m_transition_probs = m; }
+    void set_eprobs(const Matrix& m) { m_emission_probs = m; }
+    void set_iprobs(const Vector& v) { m_initial_probs = v; }
+    
     
   private:
     int m_num_hidden = num_hidden;
@@ -79,7 +93,9 @@ namespace hmm {
      * where the sum over rows is 1.
      */
     Matrix
-    m_transition_probs = NormalInitializer<num_hidden, num_hidden>(0.0, 1.0)();
+    m_transition_probs = Matrix::Constant(num_hidden,
+                                          num_hidden,
+                                          1.0 / num_hidden);
 
     /**
      * Emission probabilities 
@@ -88,11 +104,13 @@ namespace hmm {
      * such that the sum of emitting any o_i given h_j is 1.
      */
     Matrix
-    m_emission_probs =  NormalInitializer<num_hidden, num_obs>(0.0, 1.0)();
+    m_emission_probs =  Matrix::Constant(num_hidden,
+                                         num_obs,
+                                         1.0 / num_obs);
 
-    Vector m_init_probs = UniformInitializer<num_hidden, 1>(0.09, 0.11)();
-
-    
+    Vector
+    m_initial_probs = Vector::Constant(num_hidden,
+                                    1.0 / num_hidden);
 
   };
 } /* class HMM */
