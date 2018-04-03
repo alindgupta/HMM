@@ -22,6 +22,12 @@ namespace hmm {
     m_num_observed = emission_matrix.cols();
   }
 
+  /**
+   * Implementation of the forward algorithm.
+   *
+   *
+   *
+   */
   Matrix HMM::forward(const VectorType& obs) {
     std::size_t len_obs = obs.size();
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
@@ -43,6 +49,12 @@ namespace hmm {
     return A;
   }
 
+  /**
+   * Implementation of the backward algorithm.
+   *
+   *
+   * @param obs Eigen Vector of observed sequences
+   */
   Matrix HMM::backward(const VectorType& obs) {
     std::size_t len_obs = obs.size();
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
@@ -61,6 +73,39 @@ namespace hmm {
       A.col(i) = A.col(i) / colsums(i);
     }
     return A; 
+  }
+
+  /**
+   * Implementation of the Viterbi algorithm.
+   * Given a sequence of observed states, infer the most likely
+   * sequence of hidden states that gave rise to them.
+   *
+   * @param obs Eigen::Ref<const Eigen::VectorXd> (an Eigen Vector type) of
+   *   observed states.
+   */
+  Vector<int> HMM::infer(const VectorType& obs) {
+    std::size_t len_obs = obs.size();
+    Matrix A = Matrix::Zero(m_num_hidden, len_obs);
+    Matrix B = Matrix::Zero(m_num_hidden, len_obs);
+    for (int s = 0; s < m_num_hidden; ++s) {
+      A(s,1) = m_initial_probs(s) * m_emission_probs(s, obs(0));
+      B(s,1) = 0.0;
+    }
+
+    Vector tmp;
+    Eigen::Index argmax;
+    for (int t = 1; t < len_obs; ++t) {
+      for (int s = 0; s < m_num_hidden; ++s) {
+        tmp = m_emission_probs(s, obs(t)) * m_transmission_probs.col(s) * A.col(t);
+        A(s, t-1) = tmp.maxCoeff(&argmax);
+        B(s, t-1) = argmax;
+      }
+    }
+
+    Vector<int> X;
+    // do something
+    return X;
+    
   }
 
   Matrix HMM::transition_matrix(void) const {
