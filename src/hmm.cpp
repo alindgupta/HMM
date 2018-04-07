@@ -1,12 +1,34 @@
 #include "hmm.hpp"
 
+
 namespace hmm {
 
-  HMM::HMM(std::size_t size_hidden, std::size_t size_obs)
-    : m_num_hidden(size_hidden), m_num_observed(size_obs) {}
+  /**
+   * Construct an HMM object with random matrices.
+   *
+   * @param num_hidden Number N of hidden states.
+   * @param num_observed Number K of observed states.
+   *
+   * Matrices of probabilities are initialized with the default value
+   * of (1.0 / matrix size) so that all states and emissions 
+   * have equal probability, and sum to 1.
+   */
+  HMM::HMM(std::size_t num_hidden, std::size_t num_obs) noexcept
+    : m_num_hidden(num_hidden), m_num_observed(num_obs) {}
+
+  
+  /**
+   * Construct an HMM object with given probability matrices.
+   *
+   * @param transition_matrix A square matrix of transition probabilities (H x H)
+   * @param a matrix of emission probabilities (H x K)
+   *
+   * Invokes copy constructors for the Eigen data types.
+   */
 
   HMM::HMM(const MatrixType& transition_matrix,
-           const MatrixType& emission_matrix) {
+           const MatrixType& emission_matrix,
+           const VectorType& initial_probabilities = default) {
 
     if (transition_matrix.cols() != transition_matrix.rows()) {
       throw "Transition matrix is not square.";
@@ -28,7 +50,7 @@ namespace hmm {
    *
    *
    */
-  Matrix HMM::forward(const VectorType& obs) {
+  Matrix HMM::forward(const VectorType& obs) noexcept {
     std::size_t len_obs = obs.size();
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
     Vector temp(m_num_hidden);
@@ -55,7 +77,7 @@ namespace hmm {
    *
    * @param obs Eigen Vector of observed sequences
    */
-  Matrix HMM::backward(const VectorType& obs) {
+  Matrix HMM::backward(const VectorType& obs) noexcept {
     std::size_t len_obs = obs.size();
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
     Vector temp(m_num_hidden);
@@ -83,7 +105,7 @@ namespace hmm {
    * @param obs Eigen::Ref<const Eigen::VectorXd> (an Eigen Vector type) of
    *   observed states.
    */
-  Vector<int> HMM::infer(const VectorType& obs) {
+  Vector HMM::infer(const VectorType& obs) noexcept {
     std::size_t len_obs = obs.size();
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
     Matrix B = Matrix::Zero(m_num_hidden, len_obs);
@@ -92,20 +114,20 @@ namespace hmm {
       B(s,1) = 0.0;
     }
 
-    Vector tmp;
-    Eigen::Index argmax;
+    Vector tmp(len_obs); // len_obs?
+    Vector::Index argmax;
     for (int t = 1; t < len_obs; ++t) {
       for (int s = 0; s < m_num_hidden; ++s) {
-        tmp = m_emission_probs(s, obs(t)) * m_transmission_probs.col(s) * A.col(t);
+        tmp = m_emission_probs(s, obs(t)) * m_transition_probs.col(s) * A.col(t);
         A(s, t-1) = tmp.maxCoeff(&argmax);
         B(s, t-1) = argmax;
       }
     }
 
-    Vector<int> X;
-    // do something
-    return X;
+    Vector X(obs_len);
+
     
+    return X;
   }
 
   Matrix HMM::transition_matrix(void) const {
