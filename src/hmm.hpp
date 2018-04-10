@@ -14,6 +14,8 @@ namespace hmm {
   class HMM {
     
   public:
+
+    HMM() = default;
     
     /**
      * @brief Construct an HMM object 
@@ -25,40 +27,36 @@ namespace hmm {
      * @param num_hidden Number N of hidden states.
      * @param num_observed Number K of observed states.
      */
-    HMM(std::size_t num_hidden, std::size_t num_observed);
+    HMM(std::size_t num_hidden, std::size_t num_observed) noexcept;
 
     /**
      * @brief Construct an HMM object with given probability matrices.
      *
      * Invokes copy constructors for the Eigen data types.
      *
-     * @param a square matrix of transition probabilities (H x H)
-     * @param a matrix of emission probabilities (H x K)
+     * @param transition_matrix Matrix of transition probabilities of
+     * dimensions [num_hidden, num_hidden].
+     * @param emission_matrix Matrix of emission probabilities of
+     * dimensions [num_hidden, num_observed].
+     * @param initial_probs Vector of initial probabilities.
      */
-    HMM(const MatrixType& transition_probs, const MatrixType&);
-
-    /**
-     * @brief Construct an HMM object with given probability matrices,
-     * including a vector of initial probabilities.
-     *
-     * @param a square matrix of transition probabilities (H x H)
-     * @param a matrix of emission probabilities (H x K)
-     * @param a vector of initial probabilities (H x 1)
-     *
-     * Invokes copy constructors for the Eigen data types.
-     */
-    HMM(const MatrixType&, const MatrixType&, const VectorType&);
+    HMM(const MatrixType& transition_probs,
+        const MatrixType& emission_probs,
+        const VectorType& initial_probs);
+    
+    HMM(const MatrixType& transition_probs,
+        const MatrixType& emission_probs);
 
     /**
      * Calculate forward probabilities for a sequence of observed states.
      *
-     * @param vector of observed states as ``int`` values
-     * @returns matrix (H x N) of forward probabilities
+     * @param observations Vector of observed states as `int` values.
+     * @returns Matrix of forward probabilities.
      */
-    Matrix forward(const VectorType&);
+    Matrix forward(const VectorType& observations) noexcept;
 
     
-    Matrix backward(const VectorType&);
+    Matrix backward(const VectorType&) noexcept;
 
     /**
      * Calculate the Viterbi path for a sequence of observed states.
@@ -67,7 +65,7 @@ namespace hmm {
      * @returns a vector of the most likely sequence of hidden states
      *   that gave rise to the sequence of observed states provided as argument
      */ 
-    Vector infer(const VectorType&);
+    Vector infer(const VectorType&) noexcept;
 
     // getters
     Matrix transition_matrix() const;
