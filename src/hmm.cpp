@@ -1,5 +1,5 @@
 #include "hmm.hpp"
-
+#include <iostream> // for debugging purposes, will be removed in the end
 
 namespace hmm {
 
@@ -28,7 +28,7 @@ namespace hmm {
 
   HMM::HMM(const MatrixType& transition_matrix,
            const MatrixType& emission_matrix,
-           const VectorType& initial_probabilities = default) {
+           const VectorType& initial_probabilities) {
 
     if (transition_matrix.cols() != transition_matrix.rows()) {
       throw "Transition matrix is not square.";
@@ -42,6 +42,9 @@ namespace hmm {
     m_emission_probs = emission_matrix;
     m_num_hidden = transition_matrix.rows();
     m_num_observed = emission_matrix.cols();
+    m_initial_probs = initial_probabilities;
+
+    
   }
 
   /**
@@ -110,23 +113,31 @@ namespace hmm {
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
     Matrix B = Matrix::Zero(m_num_hidden, len_obs);
     for (int s = 0; s < m_num_hidden; ++s) {
-      A(s,1) = m_initial_probs(s) * m_emission_probs(s, obs(0));
-      B(s,1) = 0.0;
+      A(s,0) = m_initial_probs(s) * m_emission_probs(s, obs(0));
+      B(s,0) = 0.0;
     }
 
-    Vector tmp(len_obs); // len_obs?
+    Vector tmp(len_obs);
     Vector::Index argmax;
     for (int t = 1; t < len_obs; ++t) {
       for (int s = 0; s < m_num_hidden; ++s) {
-        tmp = m_emission_probs(s, obs(t)) * m_transition_probs.col(s) * A.col(t);
-        A(s, t-1) = tmp.maxCoeff(&argmax);
-        B(s, t-1) = argmax;
+        tmp =  m_emission_probs.col(obs(t-1)).array() * A.col(t-1).array() * m_transition_probs.col(s).array();
+
+        A(s, t) = tmp.maxCoeff(&argmax);
+        B(s, t) = argmax;
       }
     }
 
-    Vector X(obs_len);
 
-    
+    Vector Z(len_obs);
+    auto i = A.col(len_obs-1).maxCoeff(&argmax);
+    Z(len_obs-1) = argmax;
+    Vector X(len_obs);
+    X(len_obs-1) = Z(len_obs-1);
+    for (int t = len_obs-1; t > 0; --t) {
+      Z(t-1) = B(Z(t),t);
+      X(t-1) = Z(t-1);
+    }
     return X;
   }
 
