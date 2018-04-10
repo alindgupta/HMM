@@ -24,8 +24,8 @@ namespace hmm {
      * Matrices of probabilities are initialized with the inverse of the
      * matrix size so that all states and emissions have equal probability.
      *
-     * @param num_hidden Number N of hidden states.
-     * @param num_observed Number K of observed states.
+     * @param num_hidden Number of hidden states.
+     * @param num_observed Number of observed states.
      */
     HMM(std::size_t num_hidden, std::size_t num_observed) noexcept;
 
@@ -36,19 +36,21 @@ namespace hmm {
      *
      * @param transition_matrix Matrix of transition probabilities of
      * dimensions [num_hidden, num_hidden].
+     *
      * @param emission_matrix Matrix of emission probabilities of
      * dimensions [num_hidden, num_observed].
+     *
      * @param initial_probs Vector of initial probabilities.
      */
     HMM(const MatrixType& transition_probs,
         const MatrixType& emission_probs,
         const VectorType& initial_probs);
-    
+
     HMM(const MatrixType& transition_probs,
         const MatrixType& emission_probs);
 
     /**
-     * Calculate forward probabilities for a sequence of observed states.
+     * @brief Calculate forward probabilities for a sequence of observed states.
      *
      * @param observations Vector of observed states as `int` values.
      * @returns Matrix of forward probabilities.
@@ -61,15 +63,16 @@ namespace hmm {
     /**
      * Calculate the Viterbi path for a sequence of observed states.
      * 
-     * @param vector of observed states as ``int`` values
-     * @returns a vector of the most likely sequence of hidden states
-     *   that gave rise to the sequence of observed states provided as argument
+     * @param Vector of observed states as `int` values.
+     *
+     * @return Vector of the most likely sequence of hidden states
+     * that gave rise to the sequence of observed states provided as argument.
      */ 
-    Vector infer(const VectorType&) noexcept;
+    Vector viterbi(const VectorType&) noexcept;
 
     // getters
-    Matrix transition_matrix() const;
-    Matrix emission_matrix() const;
+    Matrix transition_matrix() const noexcept;
+    Matrix emission_matrix() const noexcept;
 
     // setters
     void transition_matrix(const MatrixType&);
