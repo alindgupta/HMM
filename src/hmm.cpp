@@ -4,7 +4,7 @@
 namespace hmm {
 
   /**
-   * Construct an HMM object with random matrices.
+   * @brief Construct an HMM object with random matrices.
    *
    * @param num_hidden Number N of hidden states.
    * @param num_observed Number K of observed states.
@@ -18,12 +18,22 @@ namespace hmm {
 
   
   /**
-   * Construct an HMM object with given probability matrices.
-   *
-   * @param transition_matrix A square matrix of transition probabilities (H x H)
-   * @param a matrix of emission probabilities (H x K)
+   * @brief Construct an HMM object with given probability matrices.
    *
    * Invokes copy constructors for the Eigen data types.
+   *
+   * @param transition_matrix A square matrix of transition probabilities.
+   * Rows represent "from" state and columns represent "to" state.
+   * Value at row i, column j is the probability of transitioning from i to j.
+   *
+   * @param emission_matrix A matrix of emission probabilities.
+   * Rows represent hidden states.
+   * Columns represent observed states.
+   * 
+   * @param initial_probabilities A vector of initial probabilities.
+   * Length corresponds to number of hidden states.
+   *
+   * @throws If matrix dimensions are mistmatched.
    */
 
   HMM::HMM(const MatrixType& transition_matrix,
@@ -38,61 +48,85 @@ namespace hmm {
       throw "Dimension mismatch for emission and transition matrices.";
     }
     
-    m_transition_probs = transition_matrix;
-    m_emission_probs = emission_matrix;
     m_num_hidden = transition_matrix.rows();
     m_num_observed = emission_matrix.cols();
-    m_initial_probs = initial_probabilities;
-
     
+    m_transition_probs = transition_matrix;
+    m_emission_probs = emission_matrix;
+    m_initial_probs = initial_probabilities;
   }
+  
 
   /**
-   * Implementation of the forward algorithm.
+   * @brief Implementation of the forward algorithm.
    *
-   *
-   *
+   * @param obs Vector of observed sequences.
+   * @return Matrix of forward probabilities.
    */
   Matrix HMM::forward(const VectorType& obs) noexcept {
     std::size_t len_obs = obs.size();
-    Matrix A = Matrix::Zero(m_num_hidden, len_obs);
-    Vector temp(m_num_hidden);
+
+    // Initialize a matrix to hold forward probabilities
+    Matrix A = Matrix(m_num_hidden, len_obs);
+
+    // Initialize a vector to hold (temporary) products
+    Vector prod(m_num_hidden);
+    
+    // Calculate forward probability of first observation
     for (int s = 0; s < m_num_hidden; ++s) {
-      temp = m_initial_probs(s) * m_emission_probs(s, obs(0)) * m_transition_probs.row(s);
-      A.col(0) += temp;
+      prod = m_initial_probs(s)
+        * m_emission_probs(s, obs(0))
+        * m_transition_probs.row(s);
+      A.col(0) += prod;
     }
+
+    // Calculate forward probabilities for the rest of the observations
     for (int t = 1; t < len_obs; ++t) {
       for (int s = 0; s < m_num_hidden; ++s) {
-        temp = A(s, t-1) * m_emission_probs(s, obs(t)) * m_transition_probs.row(s);
-        A.col(t) += temp;
+        prod = A(s, t-1)
+          * m_emission_probs(s, obs(t))
+          * m_transition_probs.row(s);
+        A.col(t) += prod;
       }
     }
+    
+    // Normalize forward probabilities between 0 and 1
     Vector colsums = A.colwise().sum();
     for (int i = 0; i < A.cols(); ++i) {
       A.col(i) = A.col(i) / colsums(i);
     }
+    
     return A;
   }
 
+  
   /**
-   * Implementation of the backward algorithm.
+   * @brief Implementation of the backward algorithm.
    *
-   *
-   * @param obs Eigen Vector of observed sequences
+   * @param obs Vector of observed sequences.
+   * @return Matrix of backward probabilities.
    */
   Matrix HMM::backward(const VectorType& obs) noexcept {
     std::size_t len_obs = obs.size();
+
+    // Initialize a matrix to hold forward probabilities
     Matrix A = Matrix::Zero(m_num_hidden, len_obs);
-    Vector temp(m_num_hidden);
+
+    // Initialize a vector to hold (temporary) products
+    Vector prod(m_num_hidden);
 
     A.col(0) = Vector::Constant(A.cols(), 1.0 / m_num_hidden);
 
     for (int t = 1; t < len_obs; ++t) {
       for (int s = 0; s < m_num_hidden; ++s) {
-        temp = A(s, t-1) * m_emission_probs(s, obs(t)) * m_transition_probs.col(s);
-        A.col(t) += temp;
+        prod = A(s, t-1)
+          * m_emission_probs(s, obs(t))
+          * m_transition_probs.col(s);
+        A.col(t) += prod;
       }
     }
+
+    // Normalize forward probabilities between 0 and 1
     Vector colsums = A.colwise().sum();
     for (int i = 0; i < A.cols(); ++i) {
       A.col(i) = A.col(i) / colsums(i);
@@ -100,61 +134,87 @@ namespace hmm {
     return A; 
   }
 
+  
   /**
-   * Implementation of the Viterbi algorithm.
+   * @brief Implementation of the Viterbi algorithm.
    * Given a sequence of observed states, infer the most likely
    * sequence of hidden states that gave rise to them.
    *
-   * @param obs Eigen::Ref<const Eigen::VectorXd> (an Eigen Vector type) of
-   *   observed states.
+   * @param obs Vector of observed states.
+   * @return Vector of the Viterbi path of most likely states.
    */
-  Vector HMM::infer(const VectorType& obs) noexcept {
-    std::size_t len_obs = obs.size();
-    Matrix A = Matrix::Zero(m_num_hidden, len_obs);
-    Matrix B = Matrix::Zero(m_num_hidden, len_obs);
+  Vector HMM::viterbi(const VectorType& obs) noexcept {
+    std::size_t obs_len = obs.size();
+
+    // Initialize containers of zeros to store probabilities
+    Matrix A = Matrix(m_num_hidden, obs_len);
+    Matrix B = Matrix(m_num_hidden, obs_len);
+
+    // Calculate probabilities for the first observation
     for (int s = 0; s < m_num_hidden; ++s) {
       A(s,0) = m_initial_probs(s) * m_emission_probs(s, obs(0));
       B(s,0) = 0.0;
     }
 
-    Vector tmp(len_obs);
+    Vector prod(m_num_hidden); // product of probabilities on the trellis
     Vector::Index argmax;
-    for (int t = 1; t < len_obs; ++t) {
-      for (int s = 0; s < m_num_hidden; ++s) {
-        tmp =  m_emission_probs.col(obs(t-1)).array() * A.col(t-1).array() * m_transition_probs.col(s).array();
 
-        A(s, t) = tmp.maxCoeff(&argmax);
+    // Calculate probabilities for the rest of the observations
+    for (int t = 1; t < obs_len; ++t) {
+      for (int s = 0; s < m_num_hidden; ++s) {
+        prod =  m_emission_probs(s, obs(t))
+          * A.col(t-1).array()
+          * m_transition_probs.col(s).array();
+        A(s, t) = prod.maxCoeff(&argmax);
         B(s, t) = argmax;
       }
     }
+    
+    // Initialize a vector to hold the Viterbi path
+    Vector viterbi_path(obs_len);
+    
+    A.col(obs_len-1).maxCoeff(&argmax);
+    viterbi_path(obs_len-1) = argmax;
 
-
-    Vector Z(len_obs);
-    auto i = A.col(len_obs-1).maxCoeff(&argmax);
-    Z(len_obs-1) = argmax;
-    Vector X(len_obs);
-    X(len_obs-1) = Z(len_obs-1);
-    for (int t = len_obs-1; t > 0; --t) {
-      Z(t-1) = B(Z(t),t);
-      X(t-1) = Z(t-1);
+    // Calculate the Viterbi path
+    for (int t = obs_len-1; t > 0; --t) {
+      viterbi_path(t-1) = B(viterbi_path(t),t);
     }
-    return X;
+    
+    return viterbi_path;
   }
 
-  Matrix HMM::transition_matrix(void) const {
+  
+  /**
+   * Getter for transition probabilities.
+   */
+  Matrix HMM::transition_matrix(void) const noexcept {
     return m_transition_probs;
   }
 
-  Matrix HMM::emission_matrix(void) const {
+  
+  /**
+   * Getter for emission probabilities.
+   */
+  Matrix HMM::emission_matrix(void) const noexcept {
     return m_emission_probs;
   }
 
+  
+  /**
+   * Setter for transition probabilities.
+   */
   void HMM::transition_matrix(const MatrixType& t) {
+    
     m_transition_probs = t;
   }
 
+  
+  /**
+   * Setter for emission probabilities.
+   */
   void HMM::emission_matrix(const MatrixType& e) {
     m_emission_probs = e;
   }
   
-}  
+} // namespace hmm 
