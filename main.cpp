@@ -40,8 +40,8 @@ int main(int main, const char **argv) {
 
   Eigen::VectorXd o(3);
   o << 0, 1, 2;
-  auto a = x.infer(o);
-  //std::cout << a << std::endl;
+  auto a = x.viterbi(o);
+  std::cout << a << std::endl;
   
 
 
