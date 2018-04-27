@@ -6,8 +6,8 @@
 #include <boost/random/uniform_real_distribution.hpp>
 #include <Eigen/Dense>
 
-using MatrixXd = Eigen::MatrixXd;
-using MatrixXdType = Eigen::Ref<const Eigen::MatrixXd>;
+using Matrix = Eigen::MatrixXd;
+using MatrixType = Eigen::Ref<const Eigen::MatrixXd>;
 
 namespace hmm {
   namespace initializers {
@@ -24,7 +24,7 @@ namespace hmm {
      */
     struct Initializer {
     public:
-      virtual MatrixXdType operator()() = 0;
+      virtual MatrixType operator()() = 0;
     };
 
 
@@ -37,8 +37,8 @@ namespace hmm {
     template<std::size_t n_rows, std::size_t n_cols>
     struct ZeroInitializer : public Initializer {
     public:
-      MatrixXdType operator()() override {
-        return MatrixXd::Zero(n_rows, n_cols);
+      MatrixType operator()() override {
+        return Matrix::Zero(n_rows, n_cols);
       }
     };
 
@@ -59,8 +59,8 @@ namespace hmm {
           m_upper(upper),
           m_unifd(boost::random::uniform_real_distribution<>(lower, upper)) {}
 
-      MatrixXdType operator()() override {
-        return MatrixXd::Zero(n_rows, n_cols)
+      MatrixType operator()() override {
+        return Matrix::Zero(n_rows, n_cols)
           .unaryExpr([&](double t){ return m_unifd(rng); });
       }
 
@@ -86,10 +86,10 @@ namespace hmm {
         : m_mean(mean),
           m_var(var),
           m_gaussd(boost::normal_distribution<>(mean, var)) {}
-      MatrixXdType operator()() override {
+      MatrixType operator()() override {
         boost::variate_generator<boost::mt19937&,
                                  boost::normal_distribution<>> gaussvars(rng, m_gaussd);
-        return MatrixXd::Zero(n_rows, n_cols)
+        return Matrix::Zero(n_rows, n_cols)
           .unaryExpr([&](double t){ return gaussvars(); });
       }
 
