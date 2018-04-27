@@ -7,5 +7,9 @@ set (CMAKE_CXX_STANDARD_REQUIRED ON)
 set (CMAKE_CXX_EXTENSIONS OFF)
 
 find_package (Eigen3 3.3 REQUIRED NO_MODULE)
-add_executable (out main.cpp src/hmm.cpp)
+add_executable (out
+  main.cpp
+  src/hmm.cpp
+  src/initializers.cpp
+  )
 target_link_libraries (out Eigen3::Eigen)
